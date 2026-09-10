@@ -22,3 +22,29 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "app" {
     }
   }
 }
+
+# Caps storage growth from the Firehose audit log delivery (see audit_logs.tf).
+# No expiration set — audit trail retention is a compliance decision, not an
+# infra one. Revisit once a retention period is decided.
+resource "aws_s3_bucket_lifecycle_configuration" "audit_logs" {
+  bucket = aws_s3_bucket.app.id
+
+  rule {
+    id     = "audit-logs-transition"
+    status = "Enabled"
+
+    filter {
+      prefix = "audit-logs/"
+    }
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+  }
+}

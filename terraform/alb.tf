@@ -3,7 +3,7 @@ resource "aws_lb" "main" {
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
-  subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+  subnets            = [local.public_subnet_a, local.public_subnet_b]
   tags               = { Environment = var.environment }
 }
 
@@ -11,7 +11,7 @@ resource "aws_lb_target_group" "app" {
   name        = var.app_name
   port        = 8080
   protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
   target_type = "instance" # Phase 1: EC2. Phase 2: change to "ip" for Fargate awsvpc
 
   health_check {

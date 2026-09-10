@@ -1,3 +1,29 @@
+variable "vpc_id" {
+  description = "ID of an existing VPC to deploy into. When set, vpc.tf resources are skipped and public_subnet_ids / private_subnet_ids must also be provided."
+  type        = string
+  default     = ""
+}
+
+variable "public_subnet_ids" {
+  description = "IDs of two existing public subnets (used by the ALB). Required when vpc_id is set."
+  type        = list(string)
+  default     = []
+  validation {
+    condition     = length(var.public_subnet_ids) == 0 || length(var.public_subnet_ids) >= 2
+    error_message = "public_subnet_ids must contain at least two subnet IDs (ALB requires subnets in two AZs)."
+  }
+}
+
+variable "private_subnet_ids" {
+  description = "IDs of existing private subnets (EC2 host in [0], optional second AZ in [1]). Required when vpc_id is set."
+  type        = list(string)
+  default     = []
+  validation {
+    condition     = length(var.private_subnet_ids) == 0 || length(var.private_subnet_ids) >= 1
+    error_message = "private_subnet_ids must contain at least one subnet ID."
+  }
+}
+
 variable "aws_region" {
   description = "AWS region"
   type        = string

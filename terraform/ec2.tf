@@ -6,7 +6,7 @@ data "aws_ssm_parameter" "ecs_ami" {
 resource "aws_instance" "ecs_host" {
   ami                    = data.aws_ssm_parameter.ecs_ami.value
   instance_type          = var.instance_type
-  subnet_id              = aws_subnet.private_a.id
+  subnet_id              = local.private_subnet_a
   vpc_security_group_ids = [aws_security_group.ec2.id]
   iam_instance_profile   = aws_iam_instance_profile.ecs_instance.name
 

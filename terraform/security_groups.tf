@@ -1,7 +1,7 @@
 resource "aws_security_group" "alb" {
   name        = "${var.app_name}-alb"
   description = "ALB: allow inbound HTTP/HTTPS from internet"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port   = 80
@@ -22,7 +22,7 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "ec2" {
   name        = "${var.app_name}-ec2"
   description = "ECS EC2 host: inbound from ALB, all outbound for backplane/OCM/S3"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   egress {
     from_port   = 0
@@ -56,7 +56,7 @@ resource "aws_vpc_security_group_ingress_rule" "ec2_from_alb" {
 resource "aws_security_group" "ecs_task" {
   name        = "${var.app_name}-ecs-task"
   description = "Fargate task: inbound from ALB, outbound to Aurora and internet"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port       = 8080
@@ -78,7 +78,7 @@ resource "aws_security_group" "ecs_task" {
 resource "aws_security_group" "aurora" {
   name        = "${var.app_name}-aurora"
   description = "Aurora: inbound Postgres from Fargate tasks only"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = local.vpc_id
 
   ingress {
     from_port       = 5432
