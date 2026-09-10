@@ -100,9 +100,18 @@ resource "aws_iam_policy" "task_app" {
     Version = "2012-10-17"
     Statement = [
       {
+        # Read access to the whole bucket (config-init and execution result reads).
         Effect   = "Allow"
-        Action   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+        Action   = ["s3:GetObject", "s3:ListBucket"]
         Resource = ["arn:aws:s3:::${var.s3_bucket_name}", "arn:aws:s3:::${var.s3_bucket_name}/*"]
+      },
+      {
+        # Write access scoped to the execution-output prefix only.
+        # s3:DeleteObject is intentionally omitted: WORM (COMPLIANCE mode) rejects
+        # deletes during the retention period, and the app has no legitimate delete use case.
+        Effect   = "Allow"
+        Action   = ["s3:PutObject"]
+        Resource = ["arn:aws:s3:::${var.s3_bucket_name}/trusted-actions/*"]
       },
       {
         Effect   = "Allow"

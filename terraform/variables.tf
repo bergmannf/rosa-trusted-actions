@@ -76,6 +76,22 @@ variable "s3_bucket_name" {
   type        = string
 }
 
+variable "enable_worm" {
+  description = "Enable WORM object lock retention (COMPLIANCE mode). Set true for production. The bucket is always created with object_lock_enabled = true (cannot be changed after creation), but without a retention rule objects are freely deletable."
+  type        = bool
+  default     = false
+}
+
+variable "retention_days" {
+  description = "WORM object lock retention period in days (COMPLIANCE mode — objects cannot be deleted before this period, even by the bucket owner)"
+  type        = number
+  default     = 1
+  validation {
+    condition     = var.retention_days > 0
+    error_message = "retention_days must be a positive integer."
+  }
+}
+
 variable "ocm_client_id" {
   description = "OCM client ID (ROSA_TA_OCM_CLIENT_ID)"
   type        = string
