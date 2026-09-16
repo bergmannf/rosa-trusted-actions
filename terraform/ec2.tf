@@ -3,6 +3,10 @@ data "aws_ssm_parameter" "ecs_ami" {
   name = "/aws/service/ecs/optimized-ami/amazon-linux-2023/recommended/image_id"
 }
 
+data "aws_subnet" "private_a" {
+  id = local.private_subnet_a
+}
+
 resource "aws_instance" "ecs_host" {
   ami                    = data.aws_ssm_parameter.ecs_ami.value
   instance_type          = var.instance_type
@@ -10,9 +14,13 @@ resource "aws_instance" "ecs_host" {
   vpc_security_group_ids = [aws_security_group.ec2.id]
   iam_instance_profile   = aws_iam_instance_profile.ecs_instance.name
 
-  user_data = base64encode(templatefile("${path.module}/templates/userdata.sh.tpl", {
+  user_data = templatefile("${path.module}/templates/userdata.sh.tpl", {
     ecs_cluster_name = aws_ecs_cluster.main.name
-  }))
+  })
+
+  metadata_options {
+    http_tokens = "required" # IMDSv2 mandatory
+  }
 
   root_block_device {
     volume_type           = "gp3"

@@ -1,10 +1,11 @@
 resource "aws_lb" "main" {
-  name               = var.app_name
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = [local.public_subnet_a, local.public_subnet_b]
-  tags               = { Environment = var.environment }
+  name                       = var.app_name
+  internal                   = false
+  load_balancer_type         = "application"
+  security_groups            = [aws_security_group.alb.id]
+  subnets                    = [local.public_subnet_a, local.public_subnet_b]
+  drop_invalid_header_fields = true
+  tags                       = { Environment = var.environment }
 }
 
 resource "aws_lb_target_group" "app" {
