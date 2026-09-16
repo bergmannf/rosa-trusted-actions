@@ -87,7 +87,7 @@ variable "retention_days" {
   type        = number
   default     = 1
   validation {
-    condition     = var.retention_days > 0
+    condition     = var.retention_days > 0 && floor(var.retention_days) == var.retention_days
     error_message = "retention_days must be a positive integer."
   }
 }

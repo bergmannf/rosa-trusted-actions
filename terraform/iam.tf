@@ -25,23 +25,6 @@ resource "aws_iam_role_policy_attachment" "ecs_instance_ssm" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-resource "aws_iam_policy" "ebs_attach" {
-  name = "${var.app_name}-ebs-attach"
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["ec2:AttachVolume", "ec2:DescribeVolumes"]
-      Resource = "*"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ebs_attach" {
-  role       = aws_iam_role.ecs_instance.name
-  policy_arn = aws_iam_policy.ebs_attach.arn
-}
-
 resource "aws_iam_instance_profile" "ecs_instance" {
   name = "${var.app_name}-ecs-instance"
   role = aws_iam_role.ecs_instance.name

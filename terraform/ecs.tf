@@ -117,11 +117,20 @@ resource "aws_ecs_task_definition" "app" {
 }
 
 resource "aws_ecs_service" "app" {
-  name            = var.app_name
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = 1     # Phase 2: change to 2
-  launch_type     = "EC2" # Phase 2: change to "FARGATE"
+  name                 = var.app_name
+  cluster              = aws_ecs_cluster.main.id
+  task_definition      = aws_ecs_task_definition.app.arn
+  desired_count        = 1     # Phase 2: change to 2
+  launch_type          = "EC2" # Phase 2: change to "FARGATE"
+  force_new_deployment = true
+
+  # NOTE: out-of-band secret rotation (e.g. Secrets Manager rotation Lambda) does
+  # NOT automatically restart tasks. version_id is frozen in Terraform state because
+  # the secret version resource has ignore_changes = [secret_string]. Detecting
+  # rotation requires external automation: an EventBridge rule on the
+  # "AWS API Call via CloudTrail" / secretsmanager RotateSecret event invoking
+  # `aws ecs update-service --force-new-deployment`. force_new_deployment = true
+  # above handles redeployment on every terraform apply.
 
   load_balancer {
     target_group_arn = aws_lb_target_group.app.arn
@@ -140,5 +149,10 @@ resource "aws_ecs_service" "app" {
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 100
 
-  depends_on = [aws_lb_listener.http, aws_iam_role_policy_attachment.task_execution_core]
+  depends_on = [
+    aws_lb_listener.http,
+    aws_iam_role_policy_attachment.task_execution_core,
+    aws_iam_role_policy_attachment.task_execution_secrets,
+    aws_iam_role_policy_attachment.task_app,
+  ]
 }
