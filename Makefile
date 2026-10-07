@@ -110,8 +110,8 @@ test-coverage: generate ## Run tests with coverage
 # podman is on the PATH, use 'podman compose'; otherwise fall back to
 # 'docker compose'.
 COMPOSE ?= $(shell \
-	if { command -v podman-compose 2>/dev/null || command -v docker-compose 2>/dev/null; } \
-	   && command -v podman 2>/dev/null; then \
+	if { command -v podman-compose || command -v docker-compose; } >/dev/null 2>&1 \
+	   && command -v podman >/dev/null 2>&1; then \
 		echo "podman compose"; \
 	else \
 		echo "docker compose"; \
