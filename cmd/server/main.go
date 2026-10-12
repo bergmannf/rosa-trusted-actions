@@ -48,10 +48,12 @@ func main() {
 
 func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "rosa-trusted-actions-server",
-		Short: "ROSA Trusted Actions Server",
-		Long:  "HTTP server for the ROSA Trusted Actions API",
-		RunE:  runServer,
+		Use:           "rosa-trusted-actions-server",
+		Short:         "ROSA Trusted Actions Server",
+		Long:          "HTTP server for the ROSA Trusted Actions API",
+		RunE:          runServer,
+		SilenceErrors: true,
+		SilenceUsage:  true,
 	}
 
 	// Add server flags
@@ -68,7 +70,10 @@ func runServer(cmd *cobra.Command, args []string) error {
 	configFilePath, _ := cmd.Flags().GetString("config-file")
 
 	// Load configuration from environment
-	cfg := config.Load(configFilePath)
+	cfg, err := config.Load(configFilePath)
+	if err != nil {
+		return fmt.Errorf("load configuration: %w", err)
+	}
 
 	// Override with CLI flags
 	if cmd.Flags().Changed("listen-addr") {

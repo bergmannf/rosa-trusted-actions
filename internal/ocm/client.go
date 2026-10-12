@@ -2,18 +2,31 @@ package ocm
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	sdkClient "github.com/openshift-online/ocm-sdk-go"
 )
 
+// ocmConnection defines the OCM connection methods used directly by Client.
+// It exists so tests can substitute a fake connection via Client.buildConn
+// instead of talking to a real OCM backend.
+// *sdkClient.Connection satisfies this interface.
+type ocmConnection interface {
+	Tokens(expiresIn ...time.Duration) (string, string, error)
+	Close() error
+}
+
 type Client struct {
 	config       *Config
 	logger       sdkClient.Logger
-	connection   *sdkClient.Connection
+	connection   ocmConnection
 	connUsername string
 
 	Authorization Authorization
+
+	// buildConn overrides the default connection builder for testing.
+	buildConn func(*Config) (ocmConnection, error)
 }
 
 type Config struct {
@@ -70,7 +83,47 @@ func getUsernameFromJWT(token string) string {
 	return username
 }
 
+// sdkConn returns the underlying *sdkClient.Connection needed by authorization.
+// c.connection is replaced in tests by a fake connection.
+// Otherwise, c.connection is always a *sdkClient.Connection.
+func (c *Client) sdkConn() (*sdkClient.Connection, error) {
+	conn, ok := c.connection.(*sdkClient.Connection)
+	if !ok {
+		return nil, fmt.Errorf("ocm: client connection is not a *sdkClient.Connection")
+	}
+	return conn, nil
+}
+
 func (c *Client) newConnection() error {
+	var conn ocmConnection
+	var err error
+
+	if c.buildConn != nil {
+		conn, err = c.buildConn(c.config)
+	} else {
+		conn, err = c.buildDefaultConnection()
+	}
+	if err != nil {
+		return err
+	}
+
+	token, _, err := conn.Tokens()
+
+	var connUsername string
+
+	if err == nil {
+		connUsername = getUsernameFromJWT(token)
+	} else {
+		connUsername = "anonymous"
+	}
+
+	c.connection = conn
+	c.connUsername = connUsername
+
+	return nil
+}
+
+func (c *Client) buildDefaultConnection() (*sdkClient.Connection, error) {
 	builder := sdkClient.NewConnectionBuilder().
 		Logger(c.logger).
 		URL(c.config.BaseURL).
@@ -82,28 +135,15 @@ func (c *Client) newConnection() error {
 	if len(c.config.Tokens) > 0 {
 		builder = builder.Tokens(c.config.Tokens...)
 	} else if c.config.ClientSecret == "" {
-		return fmt.Errorf("can't build OCM client connection: no client secret or token has been provided")
+		return nil, fmt.Errorf("can't build OCM client connection: no client secret or token has been provided")
 	}
 
 	connection, err := builder.Build()
 	if err != nil {
-		return fmt.Errorf("can't build OCM client connection: %s", err.Error())
+		return nil, fmt.Errorf("can't build OCM client connection: %s", err.Error())
 	}
 
-	token, _, err := connection.Tokens()
-
-	var connUsername string
-
-	if err == nil {
-		connUsername = getUsernameFromJWT(token)
-	} else {
-		connUsername = "anonymous"
-	}
-
-	c.connection = connection
-	c.connUsername = connUsername
-
-	return nil
+	return connection, nil
 }
 
 func (c *Client) Close() error {
