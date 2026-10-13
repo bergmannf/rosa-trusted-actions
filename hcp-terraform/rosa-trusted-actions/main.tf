@@ -56,28 +56,13 @@ module "rosa_trusted_actions" {
           value       = "rosa-trusted-actions.internal.company.com"
           category    = "terraform"
           description = "Used only to obtain the ACM validation CNAME token. Must match all regional workspaces."
-        },
+        }
         # public_zone_id: add when the public apex zone is available.
         # {
         #   key      = "public_zone_id"
         #   value    = "Z0123456789ABCDEF"
         #   category = "terraform"
         # },
-        {
-          key       = "backplane_client_secret"
-          category  = "terraform"
-          sensitive = true
-        },
-        {
-          key       = "ocm_client_secret"
-          category  = "terraform"
-          sensitive = true
-        },
-        {
-          key       = "ocm_token"
-          category  = "terraform"
-          sensitive = true
-        }
       ]
     }
 
@@ -148,14 +133,32 @@ module "rosa_trusted_actions" {
   }
 }
 
+# ── Workspace data sources ────────────────────────────────────────────────────
+# The workspaces module does not expose workspace IDs as outputs, so look them
+# up by name after the module creates them.
+
+data "tfe_workspace" "global" {
+  name         = "rosa-trusted-actions-global"
+  organization = "hp-platform-engineering"
+
+  depends_on = [module.rosa_trusted_actions]
+}
+
+data "tfe_workspace" "stage" {
+  name         = "rosa-trusted-actions-stage"
+  organization = "hp-platform-engineering"
+
+  depends_on = [module.rosa_trusted_actions]
+}
+
 # ── Run trigger ───────────────────────────────────────────────────────────────
 # Queues a regional run automatically whenever the global workspace finishes
 # successfully. Combined with terraform_remote_state in regional/, this means
 # a global apply propagates changes end-to-end without any manual steps.
 
-resource "tfe_workspace_run_trigger" "stage_depends_on_global" {
-  workspace_id  = module.rosa_trusted_actions.workspace_ids["rosa-trusted-actions-stage"]
-  sourceable_id = module.rosa_trusted_actions.workspace_ids["rosa-trusted-actions-global"]
+resource "tfe_run_trigger" "stage_depends_on_global" {
+  workspace_id  = data.tfe_workspace.stage.id
+  sourceable_id = data.tfe_workspace.global.id
 }
 
 # ── State sharing ─────────────────────────────────────────────────────────────
@@ -163,8 +166,6 @@ resource "tfe_workspace_run_trigger" "stage_depends_on_global" {
 # which is required for terraform_remote_state to work in the regional root.
 
 resource "tfe_workspace_settings" "global_state_sharing" {
-  workspace_id       = module.rosa_trusted_actions.workspace_ids["rosa-trusted-actions-global"]
-  remote_state_consumer_ids = [
-    module.rosa_trusted_actions.workspace_ids["rosa-trusted-actions-stage"],
-  ]
+  workspace_id              = data.tfe_workspace.global.id
+  remote_state_consumer_ids = [data.tfe_workspace.stage.id]
 }
