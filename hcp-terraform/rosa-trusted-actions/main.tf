@@ -127,6 +127,24 @@ module "rosa_trusted_actions" {
           value       = "rosa-trusted-actions.internal.company.com"
           category    = "terraform"
           description = "Private FQDN — must match the value in the global workspace."
+        },
+        {
+          key       = "ocm_client_id"
+          value     = var.ocm_client_id
+          category  = "terraform"
+          sensitive = true
+        },
+        {
+          key       = "ocm_client_secret"
+          value     = var.ocm_client_secret
+          category  = "terraform"
+          sensitive = true
+        },
+        {
+          key       = "backplane_client_secret"
+          value     = var.backplane_client_secret
+          category  = "terraform"
+          sensitive = true
         }
       ]
     }
