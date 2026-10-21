@@ -34,6 +34,10 @@ module "rosa_trusted_actions" {
       github_repo_org        = "openshift-online"
       github_repo_name       = "rosa-trusted-actions"
       variable_set_names     = ["rosa-trusted-actions-rosa-boundary-stage-default-aws-dynamic-creds"]
+      # Lets the regional workspace read this workspace's outputs via
+      # terraform_remote_state — required for the regional root's
+      # terraform_remote_state block to resolve ARNs/bucket names.
+      remote_state_consumer_workspaces = ["rosa-trusted-actions-stage"]
       variables = [
         {
           key         = "aws_region"
@@ -77,7 +81,11 @@ module "rosa_trusted_actions" {
       working_directory      = "terraform/regional"
       github_repo_org        = "openshift-online"
       github_repo_name       = "rosa-trusted-actions"
-      variable_set_names     = ["rosa-trusted-actions-rosa-boundary-stage-default-aws-dynamic-creds"]
+      # Queues a regional run whenever the global workspace applies
+      # successfully (module-managed run trigger, resolved by name since
+      # it's a sibling workspace in this same module invocation).
+      source_workspaces  = ["rosa-trusted-actions-global"]
+      variable_set_names = ["rosa-trusted-actions-rosa-boundary-stage-default-aws-dynamic-creds"]
       variables = [
         {
           key         = "aws_region"
@@ -151,39 +159,9 @@ module "rosa_trusted_actions" {
   }
 }
 
-# ── Workspace data sources ────────────────────────────────────────────────────
-# The workspaces module does not expose workspace IDs as outputs, so look them
-# up by name after the module creates them.
-
-data "tfe_workspace" "global" {
-  name         = "rosa-trusted-actions-global"
-  organization = "hp-platform-engineering"
-
-  depends_on = [module.rosa_trusted_actions]
-}
-
-data "tfe_workspace" "stage" {
-  name         = "rosa-trusted-actions-stage"
-  organization = "hp-platform-engineering"
-
-  depends_on = [module.rosa_trusted_actions]
-}
-
-# ── Run trigger ───────────────────────────────────────────────────────────────
-# Queues a regional run automatically whenever the global workspace finishes
-# successfully. Combined with terraform_remote_state in regional/, this means
-# a global apply propagates changes end-to-end without any manual steps.
-
-resource "tfe_run_trigger" "stage_depends_on_global" {
-  workspace_id  = data.tfe_workspace.stage.id
-  sourceable_id = data.tfe_workspace.global.id
-}
-
 # ── State sharing ─────────────────────────────────────────────────────────────
-# Grants the regional workspace read access to the global workspace's state,
-# which is required for terraform_remote_state to work in the regional root.
-
-resource "tfe_workspace_settings" "global_state_sharing" {
-  workspace_id              = data.tfe_workspace.global.id
-  remote_state_consumer_ids = [data.tfe_workspace.stage.id]
-}
+# Grants the regional workspace read access to the global workspace's state
+# via the module's own remote_state_consumer_workspaces field (see the global
+# workspace definition above) rather than a second tfe_workspace_settings
+# resource here, which would fight the module's tfe_workspace_settings.this
+# for the same workspace and strand the setting on the next unrelated update.
