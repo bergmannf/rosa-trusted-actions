@@ -33,7 +33,7 @@ module "rosa_trusted_actions" {
       working_directory      = "terraform/global"
       github_repo_org        = "openshift-online"
       github_repo_name       = "rosa-trusted-actions"
-      variable_set_names     = ["rosa-trusted-actions-rosa-boundary-stage-default-aws-dynamic-creds"]
+      variable_set_names     = ["rosa-trusted-actions-rosa-boundary-stage-rosa-trusted-actions-aws-dynamic-creds"]
       # Lets the regional workspace read this workspace's outputs via
       # terraform_remote_state — required for the regional root's
       # terraform_remote_state block to resolve ARNs/bucket names.
@@ -85,7 +85,7 @@ module "rosa_trusted_actions" {
       # successfully (module-managed run trigger, resolved by name since
       # it's a sibling workspace in this same module invocation).
       source_workspaces  = ["rosa-trusted-actions-global"]
-      variable_set_names = ["rosa-trusted-actions-rosa-boundary-stage-default-aws-dynamic-creds"]
+      variable_set_names = ["rosa-trusted-actions-rosa-boundary-stage-rosa-trusted-actions-aws-dynamic-creds"]
       variables = [
         {
           key         = "aws_region"
