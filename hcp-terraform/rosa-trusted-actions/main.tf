@@ -21,6 +21,16 @@ module "rosa_trusted_actions" {
   meta_project_name = "meta-rosa"
   notification_url  = var.notification_url
 
+  notification = {
+    triggers = [
+      "run:needs_attention",
+      "run:errored",
+      "assessment:check_failure",
+      "assessment:drifted",
+      "assessment:failed",
+    ]
+  }
+
   workspaces = {
     # ── Global workspace ───────────────────────────────────────────────────────
     # Run once per account before any regional workspace.
